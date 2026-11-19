@@ -1,0 +1,23 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Хадисы и книги</title>
+<style>:root{--bg:#f6efe0;--c:#fffaf0;--t:#2b2118;--m:#8a7a66;--b:#e3d6bd;--h:#ffe08a}@media(prefers-color-scheme:dark){:root{--bg:#1d1a16;--c:#272320;--t:#e8dfd0;--m:#a09585;--b:#3a342c;--h:#6b5200}}
+body{margin:0;background:var(--bg);color:var(--t);font:17px/1.6 Georgia,serif;padding:14px;max-width:760px;margin:auto}h1{font-size:21px;margin:4px 0 10px}
+.p{display:block;background:var(--c);border:1px solid var(--b);border-radius:14px;padding:14px;margin:10px 0;color:inherit;text-decoration:none}.p b{display:block;font-size:18px}small{color:var(--m)}
+input{width:100%;box-sizing:border-box;padding:10px 12px;font:inherit;font-size:16px;border:1px solid var(--b);border-radius:10px;background:var(--c);color:var(--t)}
+button{font:inherit;font-size:15px;border:1px solid var(--b);background:var(--c);color:var(--t);border-radius:10px;padding:7px 10px;margin:8px 0}
+.card{background:var(--c);border:1px solid var(--b);border-radius:12px;padding:12px 14px;margin:0 0 10px;white-space:pre-wrap}mark{background:var(--h);color:inherit}.src{color:var(--m);font-size:13px;margin-top:6px}</style></head><body>
+<h1>Хадисы и книги</h1>
+<input id="q" type="search" placeholder="Поиск по обеим частям…"><button id="sm">≈ по описанию</button>
+<div id="out"></div>
+<div id="parts"><a class="p" href="part1.html"><b>Часть 1</b>Хадисы, предания, сборники<br><small>600 книг, 13 разделов, 30 562 записи</small></a>
+<a class="p" href="part2.html"><b>Часть 2</b>Большие книги и тафсиры<br><small>52 книги, 45 851 запись</small></a></div>
+<script>
+const P=["part1.html","part2.html"],$=i=>document.getElementById(i),esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));let SEM=null;if(window.Android||/[?&]sem/.test(location.search))import('./sem.js').then(x=>SEM=x).catch(()=>{});let ready=null,id=0,MODE=0,tt;
+const st=w=>w.length>5?w.slice(0,w.length-2):w.length>3?w.slice(0,w.length-1):w;
+function load(){if(ready)return ready;return ready=Promise.all(P.map(p=>new Promise(ok=>{const f=document.createElement("iframe");f.style.display="none";f.src=p;document.body.appendChild(f);const h=e=>{if(e.source===f.contentWindow&&e.data&&e.data.t=="ready"){removeEventListener("message",h);ok(f)}};addEventListener("message",h)})))}
+function ask(f,q,mode,vec){return new Promise(ok=>{const my=++id,h=e=>{if(e.source===f.contentWindow&&e.data&&e.data.id==my){removeEventListener("message",h);ok(e.data)}};addEventListener("message",h);f.contentWindow.postMessage({t:"q",q,mode,id:my,vec},"*")})}
+async function go(){const q=$("q").value.trim();$("parts").style.display=q?"none":"";if(!q){$("out").innerHTML="";return}$("out").innerHTML="<p>Ищу… (в первый раз до 30 секунд)</p>";
+const fs=await load();let vec=null;if(MODE&&SEM){try{vec=Array.from(await SEM.embed(q))}catch(e){SEM=null}}const rs=await Promise.all(fs.map(f=>ask(f,q,MODE,vec)));if($("q").value.trim()!=q)return;let it=[];rs.forEach((r,p)=>r.items.forEach(x=>it.push({...x,p})));if(MODE)it.sort((a,b)=>b.sc-a.sc);it=it.slice(0,60);
+const re=new RegExp("("+q.split(/\s+/).filter(w=>w.length>2).map(w=>st(w.toLowerCase()).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|")+")[а-яёa-z]*","gi");
+$("out").innerHTML=`<p>Найдено: часть 1 — ${rs[0].n}, часть 2 — ${rs[1].n}</p>`+it.map(x=>`<div class="card"><div>${esc(x.x).replace(re,"<mark>$&</mark>")}</div><div class="src">Часть ${x.p+1} · ${esc(x.s)} · ${esc(x.b)}</div><button onclick="location.href='${P[x.p]}#book-${x.k.split(".").slice(0,2).join("-")}'">Открыть книгу</button></div>`).join("")}
+$("q").oninput=()=>{clearTimeout(tt);tt=setTimeout(go,400)};$("sm").onclick=()=>{MODE=!MODE;$("sm").style.background=MODE?"var(--h)":"";$("q").placeholder=MODE?"Опишите своими словами, что помните…":"Поиск по обеим частям…";go()};
+</script></body></html>
