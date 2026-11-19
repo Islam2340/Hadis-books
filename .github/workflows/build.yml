@@ -1,0 +1,52 @@
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/cache@v4
+        with:
+          path: tools/models
+          key: e5-model-v1
+      - uses: actions/cache@v4
+        id: vec
+        with:
+          path: |
+            app/src/main/assets/vectors1.bin
+            app/src/main/assets/vectors2.bin
+          key: vec-${{ hashFiles('app/src/main/assets/part1.html', 'app/src/main/assets/part2.html') }}
+      - name: Install tools
+        run: cd tools && npm install
+      - name: Compute vectors (smart search)
+        if: steps.vec.outputs.cache-hit != 'true'
+        run: |
+          cd tools
+          node embed.mjs ../app/src/main/assets/part1.html ../app/src/main/assets/vectors1.bin
+          node embed.mjs ../app/src/main/assets/part2.html ../app/src/main/assets/vectors2.bin
+      - name: Copy model and libraries into app
+        run: |
+          mkdir -p app/src/main/assets/models app/src/main/assets/lib
+          cp -r tools/models/* app/src/main/assets/models/
+          cp tools/node_modules/@xenova/transformers/dist/transformers.min.js app/src/main/assets/lib/
+          cp tools/node_modules/onnxruntime-web/dist/*.wasm app/src/main/assets/lib/
+          du -sh app/src/main/assets
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.2
+      - run: gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hadisy-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
