@@ -11,12 +11,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - uses: actions/cache@v4
+      - name: Restore model cache
+        id: mod
+        uses: actions/cache/restore@v4
         with:
           path: tools/models
           key: e5-model-v1
-      - uses: actions/cache@v4
+      - name: Restore vectors cache
         id: vec
+        uses: actions/cache/restore@v4
         with:
           path: |
             app/src/main/assets/vectors1.bin
@@ -24,12 +27,32 @@ jobs:
           key: vec-${{ hashFiles('app/src/main/assets/part1.html', 'app/src/main/assets/part2.html') }}
       - name: Install tools
         run: cd tools && npm install
-      - name: Compute vectors (smart search)
+      - name: Compute vectors part 1
         if: steps.vec.outputs.cache-hit != 'true'
-        run: |
-          cd tools
-          node embed.mjs ../app/src/main/assets/part1.html ../app/src/main/assets/vectors1.bin
-          node embed.mjs ../app/src/main/assets/part2.html ../app/src/main/assets/vectors2.bin
+        run: cd tools && node embed.mjs ../app/src/main/assets/part1.html ../app/src/main/assets/vectors1.bin
+      - name: Save vectors 1 right away
+        if: always() && steps.vec.outputs.cache-hit != 'true' && hashFiles('app/src/main/assets/vectors1.bin') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: app/src/main/assets/vectors1.bin
+          key: vec1-${{ hashFiles('app/src/main/assets/part1.html') }}
+      - name: Compute vectors part 2
+        if: steps.vec.outputs.cache-hit != 'true'
+        run: cd tools && node embed.mjs ../app/src/main/assets/part2.html ../app/src/main/assets/vectors2.bin
+      - name: Save both vectors
+        if: always() && steps.vec.outputs.cache-hit != 'true' && hashFiles('app/src/main/assets/vectors1.bin') != '' && hashFiles('app/src/main/assets/vectors2.bin') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            app/src/main/assets/vectors1.bin
+            app/src/main/assets/vectors2.bin
+          key: vec-${{ hashFiles('app/src/main/assets/part1.html', 'app/src/main/assets/part2.html') }}
+      - name: Save model cache
+        if: always() && steps.mod.outputs.cache-hit != 'true' && hashFiles('tools/models/**') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: tools/models
+          key: e5-model-v1
       - name: Copy model and libraries into app
         run: |
           mkdir -p app/src/main/assets/models app/src/main/assets/lib
@@ -37,7 +60,7 @@ jobs:
           cp tools/node_modules/@xenova/transformers/dist/transformers.min.js app/src/main/assets/lib/
           cp tools/node_modules/onnxruntime-web/dist/*.wasm app/src/main/assets/lib/
           du -sh app/src/main/assets
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
