@@ -21,6 +21,9 @@ public class MainActivity extends Activity {
 
     class Bridge {
         @JavascriptInterface public void exit() { runOnUiThread(() -> finish()); }
+        @JavascriptInterface public String version() {
+            try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception e) { return ""; }
+        }
         @JavascriptInterface public void copy(String t) {
             ClipboardManager c = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             c.setPrimaryClip(ClipData.newPlainText("text", t));
